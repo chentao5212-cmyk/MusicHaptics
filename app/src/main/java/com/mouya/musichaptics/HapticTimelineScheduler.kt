@@ -83,9 +83,18 @@ class HapticTimelineScheduler(
         outputGain: Float
     ): IntArray {
         val bins = (windowMs / binMs).toInt()
-        val base = IntArray(bins) { index ->
-            val source = if (sampleCount > 0) nativeSamples[index.coerceAtMost(sampleCount - 1)] else 0f
-            (source * sectionBodyGain(structure.section)).roundToInt().coerceIn(0, 255)
+        
+        // v3.8: Apply multi-track sidechain if tracks are active.
+        // Otherwise fallback to raw nativeSamples (legacy flat).
+        val hasMultiTrack = tracks["KICK"]!!.active || tracks["BODY"]!!.active || tracks["SNARE"]!!.active || tracks["VOCAL"]!!.active
+        val base = if (hasMultiTrack) {
+            val multitrackArray = composeSidechainCompressed()
+            IntArray(bins) { index -> (multitrackArray[index] * sectionBodyGain(structure.section)).roundToInt().coerceIn(0, 255) }
+        } else {
+            IntArray(bins) { index ->
+                val source = if (sampleCount > 0) nativeSamples[index.coerceAtMost(sampleCount - 1)] else 0f
+                (source * sectionBodyGain(structure.section)).roundToInt().coerceIn(0, 255)
+            }
         }
         val events = synchronized(lock) {
             val expiry = windowStartMs - 40L

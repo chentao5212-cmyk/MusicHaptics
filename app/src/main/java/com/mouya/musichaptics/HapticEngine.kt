@@ -293,11 +293,7 @@ class HapticEngine(
 
                 if (semanticFrameCount > 0) {
                     hapticTimeline.applyMultiTrackFrames(semanticFrameBuffer, semanticFrameCount)
-                    val compressedOutput = hapticTimeline.composeSidechainCompressed()
-                    // Convert compressed IntArray to float buffer for waveform playback
-                    for (i in compressedOutput.indices) {
-                        frameBuffer[i] = compressedOutput[i].toFloat()
-                    }
+                    // The actual blending with fallback buffer happens inside hapticTimeline.render now
                 }
 
                 val sampleCount = if (nativeBridge.isLoaded) {
