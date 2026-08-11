@@ -19,13 +19,6 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Install Gradle 7.5 manually
-        run: |
-          wget -q https://services.gradle.org/distributions/gradle-7.5-bin.zip
-          unzip -q gradle-7.5-bin.zip
-          export PATH=$PWD/gradle-7.5/bin:$PATH
-          gradle --version
-
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
@@ -33,7 +26,35 @@ jobs:
         run: |
           $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --install "ndk;26.1.10909125"
 
-      - name: Generate Gradle Wrapper (using Gradle 7.5)
+      - name: Install Gradle 7.5 and Generate Wrapper
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-7.5-bin.zip
+          unzip -q gradle-7.5-bin.zip
+          echo "$PWD/gradle-7.5/bin" >> $GITHUB_PATH
+          gradle wrapper --gradle-version 7.5
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        env:
+          GRADLE_OPTS: "-Xmx4096m"
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: musichaptics-debug
+          path: app/build/outputs/apk/debug/
+          retention-days: 30
+
+      - name: Upload Build Logs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: app/build/
+          retention-days: 7
         run: |
           export PATH=$PWD/gradle-7.5/bin:$PATH
           gradle wrapper --gradle-version 7.5
